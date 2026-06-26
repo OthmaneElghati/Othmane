@@ -95,9 +95,23 @@ function showConfirmationModal(taskText, onConfirm) {
 }
 
 // Event listener for keypress on task input (to add task on Enter key press)
-var taskInput = document.getElementById("taskInput"); // Get the task input element
-taskInput.addEventListener("keypress", function (event) { // Add keypress event listener
-    if (event.keyCode === 13) { // Check if Enter key is pressed
-        addTask(); // Call addTask function
+function initEventListeners() {
+    var taskInput = document.getElementById("taskInput"); // Get the task input element
+    if (taskInput) {
+        taskInput.addEventListener("keypress", function (event) { // Add keypress event listener
+            if (event.keyCode === 13) { // Check if Enter key is pressed
+                addTask(); // Call addTask function
+            }
+        });
     }
-});
+}
+
+// Initialize event listeners when running in a browser environment
+if (typeof document !== 'undefined' && document.getElementById("taskInput")) {
+    initEventListeners();
+}
+
+// Export functions for testing
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { addTask, toggleStrikethrough, editTask, deleteTask, showConfirmationModal, initEventListeners };
+}
