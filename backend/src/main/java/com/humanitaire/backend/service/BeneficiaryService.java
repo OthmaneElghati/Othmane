@@ -19,93 +19,120 @@ public class BeneficiaryService {
     private final BeneficiaryRepository beneficiaryRepository;
     private final MissionRepository missionRepository;
 
-    public Page<BeneficiaryDTO> getAllBeneficiaries(Pageable pageable) {
+    public Page<BeneficiaryDTO> getAll(Pageable pageable) {
         return beneficiaryRepository.findAll(pageable).map(this::toDTO);
     }
 
-    public Page<BeneficiaryDTO> searchBeneficiaries(String query, Pageable pageable) {
-        return beneficiaryRepository.findByFullNameContainingIgnoreCase(query, pageable).map(this::toDTO);
+    public BeneficiaryDTO getById(Long id) {
+        return toDTO(findById(id));
     }
 
-    public Page<BeneficiaryDTO> getBeneficiariesByMission(Long missionId, Pageable pageable) {
+    public Page<BeneficiaryDTO> search(String query, Pageable pageable) {
+        return beneficiaryRepository.search(query, pageable).map(this::toDTO);
+    }
+
+    public Page<BeneficiaryDTO> getByEmergencyLevel(String level, Pageable pageable) {
+        return beneficiaryRepository.findByEmergencyLevel(Beneficiary.EmergencyLevel.valueOf(level), pageable).map(this::toDTO);
+    }
+
+    public Page<BeneficiaryDTO> getByRegion(String region, Pageable pageable) {
+        return beneficiaryRepository.findByRegion(region, pageable).map(this::toDTO);
+    }
+
+    public Page<BeneficiaryDTO> getByMission(Long missionId, Pageable pageable) {
         return beneficiaryRepository.findByMissionId(missionId, pageable).map(this::toDTO);
     }
 
-    public BeneficiaryDTO getBeneficiaryById(Long id) {
-        Beneficiary beneficiary = beneficiaryRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Bénéficiaire", "id", id));
-        return toDTO(beneficiary);
+    @Transactional
+    public BeneficiaryDTO create(BeneficiaryDTO dto) {
+        Beneficiary ben = toEntity(dto);
+        ben.setEmergencyLevel(calculateEmergencyLevel(ben));
+        return toDTO(beneficiaryRepository.save(ben));
     }
 
     @Transactional
-    public BeneficiaryDTO createBeneficiary(BeneficiaryDTO dto) {
-        Beneficiary beneficiary = toEntity(dto);
+    public BeneficiaryDTO update(Long id, BeneficiaryDTO dto) {
+        Beneficiary ben = findById(id);
+        ben.setFullName(dto.getFullName());
+        ben.setFamilySize(dto.getFamilySize());
+        if (dto.getEmergencyLevel() != null) {
+            ben.setEmergencyLevel(Beneficiary.EmergencyLevel.valueOf(dto.getEmergencyLevel()));
+        }
+        ben.setAddress(dto.getAddress());
+        ben.setCity(dto.getCity());
+        ben.setRegion(dto.getRegion());
+        ben.setPhone(dto.getPhone());
+        ben.setNeeds(dto.getNeeds());
         if (dto.getMissionId() != null) {
             Mission mission = missionRepository.findById(dto.getMissionId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Mission", "id", dto.getMissionId()));
-            beneficiary.setMission(mission);
+                    .orElseThrow(() -> new ResourceNotFoundException("Mission non trouvée"));
+            ben.setMission(mission);
         }
-        beneficiary = beneficiaryRepository.save(beneficiary);
-        return toDTO(beneficiary);
+        ben.setEmergencyLevel(calculateEmergencyLevel(ben));
+        return toDTO(beneficiaryRepository.save(ben));
     }
 
     @Transactional
-    public BeneficiaryDTO updateBeneficiary(Long id, BeneficiaryDTO dto) {
-        Beneficiary beneficiary = beneficiaryRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Bénéficiaire", "id", id));
-
-        beneficiary.setFullName(dto.getFullName());
-        beneficiary.setFamilySize(dto.getFamilySize());
-        beneficiary.setEmergencyLevel(Beneficiary.EmergencyLevel.valueOf(dto.getEmergencyLevel()));
-        beneficiary.setAddress(dto.getAddress());
-        beneficiary.setCity(dto.getCity());
-        beneficiary.setRegion(dto.getRegion());
-        beneficiary.setPhone(dto.getPhone());
-        beneficiary.setNeeds(dto.getNeeds());
-
-        if (dto.getMissionId() != null) {
-            Mission mission = missionRepository.findById(dto.getMissionId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Mission", "id", dto.getMissionId()));
-            beneficiary.setMission(mission);
-        }
-
-        beneficiary = beneficiaryRepository.save(beneficiary);
-        return toDTO(beneficiary);
-    }
-
-    public void deleteBeneficiary(Long id) {
-        if (!beneficiaryRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Bénéficiaire", "id", id);
-        }
+    public void delete(Long id) {
         beneficiaryRepository.deleteById(id);
     }
 
-    private BeneficiaryDTO toDTO(Beneficiary beneficiary) {
+    public Beneficiary.EmergencyLevel calculateEmergencyLevel(Beneficiary ben) {
+        int score = 0;
+        if (ben.getFamilySize() != null) {
+            if (ben.getFamilySize() > 8) score += 30;
+            else if (ben.getFamilySize() > 5) score += 20;
+            else if (ben.getFamilySize() > 3) score += 10;
+        }
+        if (ben.getNeeds() != null) {
+            String needs = ben.getNeeds().toLowerCase();
+            if (needs.contains("médic") || needs.contains("santé")) score += 25;
+            if (needs.contains("alimentaire") || needs.contains("nourriture")) score += 20;
+            if (needs.contains("logement") || needs.contains("abri")) score += 20;
+            if (needs.contains("eau")) score += 15;
+        }
+        if (ben.getMission() == null) score += 10;
+        if (score >= 60) return Beneficiary.EmergencyLevel.CRITICAL;
+        if (score >= 40) return Beneficiary.EmergencyLevel.HIGH;
+        if (score >= 20) return Beneficiary.EmergencyLevel.MEDIUM;
+        return Beneficiary.EmergencyLevel.LOW;
+    }
+
+    private Beneficiary findById(Long id) {
+        return beneficiaryRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Bénéficiaire non trouvé avec l'id: " + id));
+    }
+
+    private BeneficiaryDTO toDTO(Beneficiary b) {
         return BeneficiaryDTO.builder()
-                .id(beneficiary.getId())
-                .fullName(beneficiary.getFullName())
-                .familySize(beneficiary.getFamilySize())
-                .emergencyLevel(beneficiary.getEmergencyLevel() != null ? beneficiary.getEmergencyLevel().name() : null)
-                .address(beneficiary.getAddress())
-                .city(beneficiary.getCity())
-                .region(beneficiary.getRegion())
-                .phone(beneficiary.getPhone())
-                .needs(beneficiary.getNeeds())
-                .missionId(beneficiary.getMission() != null ? beneficiary.getMission().getId() : null)
-                .missionTitle(beneficiary.getMission() != null ? beneficiary.getMission().getTitle() : null)
+                .id(b.getId())
+                .fullName(b.getFullName())
+                .familySize(b.getFamilySize())
+                .emergencyLevel(b.getEmergencyLevel() != null ? b.getEmergencyLevel().name() : null)
+                .address(b.getAddress())
+                .city(b.getCity())
+                .region(b.getRegion())
+                .phone(b.getPhone())
+                .needs(b.getNeeds())
+                .missionId(b.getMission() != null ? b.getMission().getId() : null)
+                .missionTitle(b.getMission() != null ? b.getMission().getTitle() : null)
+                .createdAt(b.getCreatedAt())
+                .updatedAt(b.getUpdatedAt())
                 .build();
     }
 
     private Beneficiary toEntity(BeneficiaryDTO dto) {
-        return Beneficiary.builder()
+        Beneficiary.BeneficiaryBuilder builder = Beneficiary.builder()
                 .fullName(dto.getFullName())
                 .familySize(dto.getFamilySize())
-                .emergencyLevel(dto.getEmergencyLevel() != null ? Beneficiary.EmergencyLevel.valueOf(dto.getEmergencyLevel()) : Beneficiary.EmergencyLevel.MEDIUM)
                 .address(dto.getAddress())
                 .city(dto.getCity())
                 .region(dto.getRegion())
                 .phone(dto.getPhone())
-                .needs(dto.getNeeds())
-                .build();
+                .needs(dto.getNeeds());
+        if (dto.getEmergencyLevel() != null) {
+            builder.emergencyLevel(Beneficiary.EmergencyLevel.valueOf(dto.getEmergencyLevel()));
+        }
+        return builder.build();
     }
 }

@@ -2,6 +2,7 @@ package com.humanitaire.backend.controller;
 
 import com.humanitaire.backend.dto.MissionDTO;
 import com.humanitaire.backend.service.MissionService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -9,6 +10,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/missions")
@@ -18,58 +21,52 @@ public class MissionController {
     private final MissionService missionService;
 
     @GetMapping
-    public ResponseEntity<Page<MissionDTO>> getAllMissions(
+    public ResponseEntity<Page<MissionDTO>> getAll(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String direction) {
-        Sort sort = direction.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
-        Pageable pageable = PageRequest.of(page, size, sort);
-        return ResponseEntity.ok(missionService.getAllMissions(pageable));
-    }
-
-    @GetMapping("/search")
-    public ResponseEntity<Page<MissionDTO>> searchMissions(
-            @RequestParam String q,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(missionService.searchMissions(q, PageRequest.of(page, size)));
-    }
-
-    @GetMapping("/status/{status}")
-    public ResponseEntity<Page<MissionDTO>> getMissionsByStatus(
-            @PathVariable String status,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(missionService.getMissionsByStatus(status, PageRequest.of(page, size)));
-    }
-
-    @GetMapping("/region/{region}")
-    public ResponseEntity<Page<MissionDTO>> getMissionsByRegion(
-            @PathVariable String region,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(missionService.getMissionsByRegion(region, PageRequest.of(page, size)));
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String region,
+            @RequestParam(required = false) String priority) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDir.equals("asc") ? Sort.Direction.ASC : Sort.Direction.DESC, sortBy));
+        if (search != null && !search.isEmpty()) return ResponseEntity.ok(missionService.search(search, pageable));
+        if (status != null && !status.isEmpty()) return ResponseEntity.ok(missionService.getByStatus(status, pageable));
+        if (region != null && !region.isEmpty()) return ResponseEntity.ok(missionService.getByRegion(region, pageable));
+        if (priority != null && !priority.isEmpty()) return ResponseEntity.ok(missionService.getByPriority(priority, pageable));
+        return ResponseEntity.ok(missionService.getAll(pageable));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<MissionDTO> getMissionById(@PathVariable Long id) {
-        return ResponseEntity.ok(missionService.getMissionById(id));
+    public ResponseEntity<MissionDTO> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(missionService.getById(id));
+    }
+
+    @GetMapping("/recommended")
+    public ResponseEntity<List<MissionDTO>> getRecommended() {
+        return ResponseEntity.ok(missionService.getRecommendedMissions());
+    }
+
+    @GetMapping("/manager/{managerId}")
+    public ResponseEntity<Page<MissionDTO>> getByManager(@PathVariable Long managerId,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(missionService.getByManager(managerId, PageRequest.of(page, size)));
     }
 
     @PostMapping
-    public ResponseEntity<MissionDTO> createMission(@RequestBody MissionDTO dto) {
-        return ResponseEntity.ok(missionService.createMission(dto));
+    public ResponseEntity<MissionDTO> create(@Valid @RequestBody MissionDTO dto) {
+        return ResponseEntity.ok(missionService.create(dto));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<MissionDTO> updateMission(@PathVariable Long id, @RequestBody MissionDTO dto) {
-        return ResponseEntity.ok(missionService.updateMission(id, dto));
+    public ResponseEntity<MissionDTO> update(@PathVariable Long id, @Valid @RequestBody MissionDTO dto) {
+        return ResponseEntity.ok(missionService.update(id, dto));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteMission(@PathVariable Long id) {
-        missionService.deleteMission(id);
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        missionService.delete(id);
         return ResponseEntity.noContent().build();
     }
 

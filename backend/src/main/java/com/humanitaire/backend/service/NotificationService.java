@@ -1,7 +1,9 @@
 package com.humanitaire.backend.service;
 
+import com.humanitaire.backend.dto.NotificationDTO;
 import com.humanitaire.backend.entity.Notification;
 import com.humanitaire.backend.entity.User;
+import com.humanitaire.backend.exception.ResourceNotFoundException;
 import com.humanitaire.backend.repository.NotificationRepository;
 import com.humanitaire.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,12 +21,13 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
 
-    public List<Notification> getUnreadNotifications(Long userId) {
-        return notificationRepository.findByUserIdAndReadFalseOrderByCreatedAtDesc(userId);
+    public Page<NotificationDTO> getByUser(Long userId, Pageable pageable) {
+        return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable).map(this::toDTO);
     }
 
-    public Page<Notification> getAllNotifications(Long userId, Pageable pageable) {
-        return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+    public List<NotificationDTO> getUnreadByUser(Long userId) {
+        return notificationRepository.findByUserIdAndReadFalseOrderByCreatedAtDesc(userId)
+                .stream().map(this::toDTO).toList();
     }
 
     public long getUnreadCount(Long userId) {
@@ -32,11 +35,26 @@ public class NotificationService {
     }
 
     @Transactional
-    public void markAsRead(Long notificationId) {
-        notificationRepository.findById(notificationId).ifPresent(n -> {
-            n.setRead(true);
-            notificationRepository.save(n);
-        });
+    public NotificationDTO create(NotificationDTO dto) {
+        Notification notification = Notification.builder()
+                .title(dto.getTitle())
+                .message(dto.getMessage())
+                .type(dto.getType() != null ? Notification.NotificationType.valueOf(dto.getType()) : Notification.NotificationType.INFO)
+                .build();
+        if (dto.getUserId() != null) {
+            User user = userRepository.findById(dto.getUserId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
+            notification.setUser(user);
+        }
+        return toDTO(notificationRepository.save(notification));
+    }
+
+    @Transactional
+    public void markAsRead(Long id) {
+        Notification notification = notificationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Notification non trouvée"));
+        notification.setRead(true);
+        notificationRepository.save(notification);
     }
 
     @Transactional
@@ -47,17 +65,31 @@ public class NotificationService {
     }
 
     @Transactional
-    public void createNotification(Long userId, String title, String message, Notification.NotificationType type) {
+    public void delete(Long id) {
+        notificationRepository.deleteById(id);
+    }
+
+    public void createSystemNotification(Long userId, String title, String message, Notification.NotificationType type) {
         User user = userRepository.findById(userId).orElse(null);
         if (user != null) {
-            Notification notification = Notification.builder()
+            notificationRepository.save(Notification.builder()
                     .title(title)
                     .message(message)
                     .type(type)
                     .user(user)
-                    .read(false)
-                    .build();
-            notificationRepository.save(notification);
+                    .build());
         }
+    }
+
+    private NotificationDTO toDTO(Notification n) {
+        return NotificationDTO.builder()
+                .id(n.getId())
+                .title(n.getTitle())
+                .message(n.getMessage())
+                .type(n.getType() != null ? n.getType().name() : null)
+                .read(n.isRead())
+                .userId(n.getUser() != null ? n.getUser().getId() : null)
+                .createdAt(n.getCreatedAt())
+                .build();
     }
 }

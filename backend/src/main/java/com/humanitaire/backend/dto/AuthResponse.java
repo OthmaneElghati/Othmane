@@ -7,7 +7,7 @@ import java.util.Set;
 public class AuthResponse {
     private String token;
     private String refreshToken;
-    private String type = "Bearer";
+    private String type;
     private Long id;
     private String email;
     private String firstName;

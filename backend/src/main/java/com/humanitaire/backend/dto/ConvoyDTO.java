@@ -21,4 +21,7 @@ public class ConvoyDTO {
     private String description;
     private String cargo;
     private Long missionId;
+    private String missionTitle;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

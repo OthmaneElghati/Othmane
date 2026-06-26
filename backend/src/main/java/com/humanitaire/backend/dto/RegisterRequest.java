@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class RegisterRequest {
     @NotBlank
     private String firstName;
@@ -23,5 +23,6 @@ public class RegisterRequest {
 
     private String phone;
     private String city;
+    private String region;
     private String role;
 }

@@ -2,7 +2,7 @@ package com.humanitaire.backend.dto;
 
 import lombok.*;
 import java.time.LocalDate;
-import java.util.Set;
+import java.time.LocalDateTime;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class MissionDTO {
@@ -19,8 +19,12 @@ public class MissionDTO {
     private String city;
     private String region;
     private String image;
+    private Integer numberOfBeneficiaries;
     private Integer priorityScore;
-    private Integer volunteerCount;
-    private Integer beneficiaryCount;
-    private Set<Long> volunteerIds;
+    private Long managerId;
+    private String managerName;
+    private int volunteerCount;
+    private int beneficiaryCount;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

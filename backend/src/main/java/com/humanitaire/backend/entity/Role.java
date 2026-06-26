@@ -19,6 +19,7 @@ public class Role {
         ROLE_SUPER_ADMIN,
         ROLE_MISSION_MANAGER,
         ROLE_VOLUNTEER,
+        ROLE_BENEFICIARY,
         ROLE_DONOR
     }
 }

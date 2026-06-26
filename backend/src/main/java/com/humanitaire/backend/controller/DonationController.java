@@ -2,9 +2,11 @@ package com.humanitaire.backend.controller;
 
 import com.humanitaire.backend.dto.DonationDTO;
 import com.humanitaire.backend.service.DonationService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,43 +21,44 @@ public class DonationController {
     private final DonationService donationService;
 
     @GetMapping
-    public ResponseEntity<Page<DonationDTO>> getAllDonations(
+    public ResponseEntity<Page<DonationDTO>> getAll(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String direction) {
-        Sort sort = direction.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
-        return ResponseEntity.ok(donationService.getAllDonations(PageRequest.of(page, size, sort)));
-    }
-
-    @GetMapping("/donor/{donorId}")
-    public ResponseEntity<Page<DonationDTO>> getDonationsByDonor(
-            @PathVariable Long donorId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(donationService.getDonationsByDonor(donorId, PageRequest.of(page, size)));
-    }
-
-    @GetMapping("/mission/{missionId}")
-    public ResponseEntity<Page<DonationDTO>> getDonationsByMission(
-            @PathVariable Long missionId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(donationService.getDonationsByMission(missionId, PageRequest.of(page, size)));
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long donorId) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDir.equals("asc") ? Sort.Direction.ASC : Sort.Direction.DESC, sortBy));
+        if (search != null && !search.isEmpty()) return ResponseEntity.ok(donationService.search(search, pageable));
+        if (status != null && !status.isEmpty()) return ResponseEntity.ok(donationService.getByStatus(status, pageable));
+        if (donorId != null) return ResponseEntity.ok(donationService.getByDonor(donorId, pageable));
+        return ResponseEntity.ok(donationService.getAll(pageable));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<DonationDTO> getDonationById(@PathVariable Long id) {
-        return ResponseEntity.ok(donationService.getDonationById(id));
+    public ResponseEntity<DonationDTO> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(donationService.getById(id));
+    }
+
+    @GetMapping("/donor/{donorId}/stats")
+    public ResponseEntity<Map<String, Object>> getDonorStats(@PathVariable Long donorId) {
+        return ResponseEntity.ok(donationService.getDonorStats(donorId));
     }
 
     @PostMapping
-    public ResponseEntity<DonationDTO> createDonation(@RequestBody DonationDTO dto) {
-        return ResponseEntity.ok(donationService.createDonation(dto));
+    public ResponseEntity<DonationDTO> create(@Valid @RequestBody DonationDTO dto) {
+        return ResponseEntity.ok(donationService.create(dto));
     }
 
-    @GetMapping("/total")
-    public ResponseEntity<Map<String, Double>> getTotalAmount() {
-        return ResponseEntity.ok(Map.of("total", donationService.getTotalDonationAmount()));
+    @PutMapping("/{id}")
+    public ResponseEntity<DonationDTO> update(@PathVariable Long id, @Valid @RequestBody DonationDTO dto) {
+        return ResponseEntity.ok(donationService.update(id, dto));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        donationService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }

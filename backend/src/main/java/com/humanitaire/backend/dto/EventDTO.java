@@ -2,6 +2,7 @@ package com.humanitaire.backend.dto;
 
 import lombok.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class EventDTO {
@@ -17,4 +18,6 @@ public class EventDTO {
     private Integer currentParticipants;
     private String image;
     private String status;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

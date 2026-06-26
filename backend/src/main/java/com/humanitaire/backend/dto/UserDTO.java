@@ -2,9 +2,10 @@ package com.humanitaire.backend.dto;
 
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.Set;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-public class VolunteerDTO {
+public class UserDTO {
     private Long id;
     private String firstName;
     private String lastName;
@@ -13,12 +14,9 @@ public class VolunteerDTO {
     private String address;
     private String city;
     private String region;
-    private String skills;
-    private boolean available;
     private String avatar;
-    private Integer experience;
-    private Long userId;
-    private int missionCount;
+    private boolean enabled;
+    private Set<String> roles;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

@@ -16,5 +16,7 @@ public class DonationDTO {
     private String description;
     private Long missionId;
     private String missionTitle;
+    private Long donorId;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

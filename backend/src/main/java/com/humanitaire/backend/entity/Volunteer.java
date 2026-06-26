@@ -33,6 +33,7 @@ public class Volunteer {
     private String skills;
     private boolean available = true;
     private String avatar;
+    private Integer experience;
 
     @ManyToOne
     @JoinColumn(name = "user_id")
