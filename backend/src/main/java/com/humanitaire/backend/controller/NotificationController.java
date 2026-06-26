@@ -25,6 +25,7 @@ public class NotificationController {
             @AuthenticationPrincipal UserPrincipal user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
+        size = Math.min(size, 100);
         return ResponseEntity.ok(notificationService.getAllNotifications(user.getId(), PageRequest.of(page, size)));
     }
 
@@ -39,8 +40,8 @@ public class NotificationController {
     }
 
     @PutMapping("/{id}/read")
-    public ResponseEntity<Void> markAsRead(@PathVariable Long id) {
-        notificationService.markAsRead(id);
+    public ResponseEntity<Void> markAsRead(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal user) {
+        notificationService.markAsRead(id, user.getId());
         return ResponseEntity.ok().build();
     }
 

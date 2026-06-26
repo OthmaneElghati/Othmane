@@ -71,7 +71,10 @@ public class AuthService {
         Role.RoleName roleName = Role.RoleName.ROLE_VOLUNTEER;
         if (request.getRole() != null) {
             try {
-                roleName = Role.RoleName.valueOf(request.getRole());
+                Role.RoleName requested = Role.RoleName.valueOf(request.getRole());
+                if (requested == Role.RoleName.ROLE_VOLUNTEER || requested == Role.RoleName.ROLE_DONOR) {
+                    roleName = requested;
+                }
             } catch (IllegalArgumentException ignored) {
             }
         }
@@ -115,16 +118,14 @@ public class AuthService {
                 .build();
     }
 
-    public String forgotPassword(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new BadRequestException("Aucun compte associé à cet email"));
-
-        String token = UUID.randomUUID().toString();
-        user.setResetToken(token);
-        user.setResetTokenExpiry(LocalDateTime.now().plusHours(1));
-        userRepository.save(user);
-
-        return token;
+    public void forgotPassword(String email) {
+        userRepository.findByEmail(email).ifPresent(user -> {
+            String token = UUID.randomUUID().toString();
+            user.setResetToken(token);
+            user.setResetTokenExpiry(LocalDateTime.now().plusHours(1));
+            userRepository.save(user);
+            // TODO: send token via email instead of returning it
+        });
     }
 
     @Transactional

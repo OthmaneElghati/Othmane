@@ -32,10 +32,12 @@ public class NotificationService {
     }
 
     @Transactional
-    public void markAsRead(Long notificationId) {
+    public void markAsRead(Long notificationId, Long userId) {
         notificationRepository.findById(notificationId).ifPresent(n -> {
-            n.setRead(true);
-            notificationRepository.save(n);
+            if (n.getUser().getId().equals(userId)) {
+                n.setRead(true);
+                notificationRepository.save(n);
+            }
         });
     }
 

@@ -22,6 +22,7 @@ public class BeneficiaryController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String direction) {
+        size = Math.min(size, 100);
         Sort sort = direction.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         return ResponseEntity.ok(beneficiaryService.getAllBeneficiaries(PageRequest.of(page, size, sort)));
     }
@@ -31,6 +32,7 @@ public class BeneficiaryController {
             @RequestParam String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+        size = Math.min(size, 100);
         return ResponseEntity.ok(beneficiaryService.searchBeneficiaries(q, PageRequest.of(page, size)));
     }
 
@@ -39,6 +41,7 @@ public class BeneficiaryController {
             @PathVariable Long missionId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+        size = Math.min(size, 100);
         return ResponseEntity.ok(beneficiaryService.getBeneficiariesByMission(missionId, PageRequest.of(page, size)));
     }
 

@@ -23,6 +23,7 @@ public class MissionController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String direction) {
+        size = Math.min(size, 100);
         Sort sort = direction.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
         return ResponseEntity.ok(missionService.getAllMissions(pageable));
@@ -33,6 +34,7 @@ public class MissionController {
             @RequestParam String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+        size = Math.min(size, 100);
         return ResponseEntity.ok(missionService.searchMissions(q, PageRequest.of(page, size)));
     }
 
@@ -41,6 +43,7 @@ public class MissionController {
             @PathVariable String status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+        size = Math.min(size, 100);
         return ResponseEntity.ok(missionService.getMissionsByStatus(status, PageRequest.of(page, size)));
     }
 
@@ -49,6 +52,7 @@ public class MissionController {
             @PathVariable String region,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+        size = Math.min(size, 100);
         return ResponseEntity.ok(missionService.getMissionsByRegion(region, PageRequest.of(page, size)));
     }
 

@@ -24,6 +24,7 @@ public class VolunteerController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String direction) {
+        size = Math.min(size, 100);
         Sort sort = direction.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         return ResponseEntity.ok(volunteerService.getAllVolunteers(PageRequest.of(page, size, sort)));
     }
@@ -33,6 +34,7 @@ public class VolunteerController {
             @RequestParam String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+        size = Math.min(size, 100);
         return ResponseEntity.ok(volunteerService.searchVolunteers(q, PageRequest.of(page, size)));
     }
 
@@ -40,6 +42,7 @@ public class VolunteerController {
     public ResponseEntity<Page<VolunteerDTO>> getAvailableVolunteers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+        size = Math.min(size, 100);
         return ResponseEntity.ok(volunteerService.getAvailableVolunteers(PageRequest.of(page, size)));
     }
 

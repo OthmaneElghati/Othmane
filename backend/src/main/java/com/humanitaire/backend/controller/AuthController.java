@@ -30,8 +30,8 @@ public class AuthController {
 
     @PostMapping("/forgot-password")
     public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody Map<String, String> request) {
-        String token = authService.forgotPassword(request.get("email"));
-        return ResponseEntity.ok(Map.of("message", "Un email de réinitialisation a été envoyé", "token", token));
+        authService.forgotPassword(request.get("email"));
+        return ResponseEntity.ok(Map.of("message", "Si un compte est associé à cet email, un lien de réinitialisation a été envoyé"));
     }
 
     @PostMapping("/reset-password")
