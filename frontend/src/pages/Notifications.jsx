@@ -16,6 +16,7 @@ function Notifications() {
       const res = await notificationService.getAll()
       setItems(Array.isArray(res.data) ? res.data : res.data.content || [])
     } catch (err) {
+      console.error('Failed to load notifications:', err)
       setItems([])
     } finally {
       setLoading(false)
@@ -27,7 +28,7 @@ function Notifications() {
       await notificationService.markAsRead(id)
       setItems(items.map(i => i.id === id ? { ...i, read: true } : i))
     } catch (err) {
-      // silent fail
+      console.error('Failed to mark notification as read:', err)
     }
   }
 
@@ -37,7 +38,8 @@ function Notifications() {
       setItems(items.map(i => ({ ...i, read: true })))
       Swal.fire({ icon: 'success', title: 'Toutes les notifications lues', timer: 1500, showConfirmButton: false })
     } catch (err) {
-      setItems(items.map(i => ({ ...i, read: true })))
+      console.error('Failed to mark all notifications as read:', err)
+      Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible de marquer les notifications comme lues' })
     }
   }
 
@@ -46,7 +48,8 @@ function Notifications() {
       await notificationService.delete(id)
       setItems(items.filter(i => i.id !== id))
     } catch (err) {
-      setItems(items.filter(i => i.id !== id))
+      console.error('Failed to delete notification:', err)
+      Swal.fire({ icon: 'error', title: 'Erreur', text: 'Impossible de supprimer la notification' })
     }
   }
 

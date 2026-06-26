@@ -23,7 +23,8 @@ function Reports() {
       }
       Swal.fire({ icon: 'success', title: 'Rapport généré', text: `Le rapport ${type} a été téléchargé.`, timer: 2000, showConfirmButton: false })
     } catch (err) {
-      Swal.fire({ icon: 'info', title: 'Rapport', text: 'Le rapport sera disponible une fois le backend connecté.' })
+      console.error('Failed to generate report:', err)
+      Swal.fire({ icon: 'error', title: 'Erreur', text: err.response?.data?.message || 'Impossible de générer le rapport' })
     } finally {
       setGenerating('')
     }

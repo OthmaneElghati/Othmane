@@ -25,6 +25,7 @@ function Donations() {
       const res = await donationService.getAll()
       setItems(Array.isArray(res.data) ? res.data : res.data.content || [])
     } catch (err) {
+      console.error('Failed to load donations:', err)
       setItems([])
     } finally {
       setLoading(false)

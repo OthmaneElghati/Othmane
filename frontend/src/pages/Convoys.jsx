@@ -23,6 +23,7 @@ function Convoys() {
       const res = await convoyService.getAll()
       setItems(Array.isArray(res.data) ? res.data : res.data.content || [])
     } catch (err) {
+      console.error('Failed to load convoys:', err)
       setItems([])
     } finally {
       setLoading(false)
