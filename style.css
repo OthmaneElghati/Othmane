@@ -55,15 +55,11 @@ li button {
 }
 
 /* Bootstrap Modals */
-#confirmationModal .modal-content,
-#editModal .modal-content {
+.modal .modal-content {
     text-align: center;
 }
 
-#confirmButton,
-#cancelButton,
-#saveButton,
-#cancelEditButton {
+.modal-btn {
     padding: 10px 20px;
     font-size: 16px;
     border: none;
@@ -71,21 +67,16 @@ li button {
     border-radius: 5px;
 }
 
-#confirmButton,
-#saveButton {
+.modal-btn-confirm {
     background-color: #4caf50;
     color: #fff;
 }
 
-#cancelButton,
-#cancelEditButton {
+.modal-btn-cancel {
     background-color: #6c757d;
     color: #fff;
 }
 
-#confirmButton:hover,
-#cancelButton:hover,
-#saveButton:hover,
-#cancelEditButton:hover {
+.modal-btn:hover {
     opacity: 0.8;
 }

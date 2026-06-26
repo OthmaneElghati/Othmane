@@ -1,103 +1,147 @@
-// Function to add a new task to the task list
-function addTask() {
-    var taskInput = document.getElementById("taskInput"); // Get the task input element
-    var taskText = taskInput.value.trim(); // Get the trimmed task text
+// --- Shared Utilities ---
 
-    if (taskText !== "") { // Check if the task text is not empty
-        var taskList = document.getElementById("taskList"); // Get the task list element
-        var li = document.createElement("li"); // Create a new list item
-        li.className = 'list-group-item d-flex align-items-center'; // Set the list item classes
-
-        var checkbox = document.createElement("input"); // Create a new checkbox input
-        checkbox.type = "checkbox"; // Set the input type to checkbox
-        checkbox.className = 'mr-2'; // Set the checkbox class
-        checkbox.addEventListener('change', function () {
-            toggleStrikethrough(checkbox, span); // Add change event listener to toggle strikethrough
-        });
-        li.appendChild(checkbox); // Append the checkbox to the list item
-
-        var span = document.createElement("span"); // Create a new span element
-        span.textContent = taskText; // Set the span text to the task text
-        span.classList.add('task-text'); // Add the task-text class to the span
-        li.appendChild(span); // Append the span to the list item
-
-        var editButton = document.createElement("button"); // Create a new edit button
-        editButton.innerHTML = "Edit"; // Set the button text
-        editButton.classList.add('btn', 'btn-sm', 'btn-warning', 'ml-auto', 'mr-2'); // Add button classes
-        editButton.addEventListener('click', function () {
-            editTask(li); // Add click event listener to edit task
-        });
-        li.appendChild(editButton); // Append the edit button to the list item
-
-        var deleteButton = document.createElement("button"); // Create a new delete button
-        deleteButton.innerHTML = "Delete"; // Set the button text
-        deleteButton.classList.add('btn', 'btn-sm', 'btn-danger'); // Add button classes
-        deleteButton.addEventListener('click', function () {
-            deleteTask(li); // Add click event listener to delete task
-        });
-        li.appendChild(deleteButton); // Append the delete button to the list item
-
-        taskList.appendChild(li); // Append the list item to the task list
-        taskInput.value = ""; // Clear the task input
-    } else {
-        alert("Please enter a task!"); // Show an alert if the task text is empty
-    }
+// Creates a DOM element with optional properties, CSS classes, text, and an event listener.
+function createElement(tag, options) {
+    var el = document.createElement(tag);
+    if (options.type) el.type = options.type;
+    if (options.className) el.className = options.className;
+    if (options.classes) el.classList.add.apply(el.classList, options.classes);
+    if (options.text) el.textContent = options.text;
+    if (options.html) el.innerHTML = options.html;
+    if (options.event) el.addEventListener(options.event.type, options.event.handler);
+    return el;
 }
 
-// Function to toggle strikethrough style based on checkbox state
-function toggleStrikethrough(checkbox, taskTextElement) {
-    if (checkbox.checked) {
-        taskTextElement.classList.add('strikethrough'); // Add strikethrough class if checkbox is checked
-    } else {
-        taskTextElement.classList.remove('strikethrough'); // Remove strikethrough class if checkbox is unchecked
-    }
-}
-
-// Function to edit a task
-function editTask(taskItem) {
-    var taskText = taskItem.querySelector(".task-text").textContent.trim(); // Get the task text
-    var editText = document.getElementById('editText'); // Get the edit text element
-    var editInput = document.getElementById('editInput'); // Get the edit input element
-    editText.textContent = `Edit task: "${taskText}"`; // Set the edit text content
-    editInput.value = taskText; // Set the edit input value
-
-    $('#editModal').modal('show'); // Show the edit modal
-
-    document.getElementById('saveButton').onclick = function () { // Add click event to save button
-        var newText = editInput.value.trim(); // Get the trimmed new text
-        if (newText !== "") { // Check if new text is not empty
-            taskItem.querySelector(".task-text").textContent = newText; // Update task text in UI
-            $('#editModal').modal('hide'); // Hide the edit modal
-        } else {
-            alert("Please enter a task!"); // Show an alert if new text is empty
-        }
-    };
-}
-
-// Function to delete a task
-function deleteTask(taskItem) {
-    var taskText = taskItem.querySelector(".task-text").textContent.trim(); // Get the task text
-    showConfirmationModal(taskText, function () { // Show confirmation modal for task deletion
-        taskItem.remove(); // Remove task from UI
+// Creates a styled button with a click handler.
+function createButton(text, classes, onClick) {
+    return createElement("button", {
+        html: text,
+        classes: classes,
+        event: { type: 'click', handler: onClick }
     });
 }
 
-// Function to show a confirmation modal
-function showConfirmationModal(taskText, onConfirm) {
-    const confirmationText = document.getElementById('confirmationText'); // Get the confirmation text element
-    confirmationText.textContent = `Voulez-vous supprimer la tâche "${taskText}" ?`; // Set confirmation text
-    $('#confirmationModal').modal('show'); // Show confirmation modal
+// Extracts the trimmed task text from a list item element.
+function getTaskText(taskItem) {
+    return taskItem.querySelector(".task-text").textContent.trim();
+}
 
-    document.getElementById('confirmButton').onclick = function () { // Add click event to confirm button
-        onConfirm(); // Call onConfirm callback
-        $('#confirmationModal').modal('hide'); // Hide confirmation modal
+// Validates that text is non-empty; shows an alert and returns false if empty.
+function validateTaskText(text) {
+    if (text === "") {
+        alert("Please enter a task!");
+        return false;
+    }
+    return true;
+}
+
+// Shows a Bootstrap modal by its ID.
+function showModal(id) {
+    $('#' + id).modal('show');
+}
+
+// Hides a Bootstrap modal by its ID.
+function hideModal(id) {
+    $('#' + id).modal('hide');
+}
+
+// --- Application Logic ---
+
+// Adds a new task to the task list.
+function addTask() {
+    var taskInput = document.getElementById("taskInput");
+    var taskText = taskInput.value.trim();
+
+    if (!validateTaskText(taskText)) return;
+
+    var taskList = document.getElementById("taskList");
+    var li = createElement("li", { className: 'list-group-item d-flex align-items-center' });
+
+    var checkbox = createElement("input", {
+        type: "checkbox",
+        className: 'mr-2'
+    });
+
+    var span = createElement("span", {
+        text: taskText,
+        classes: ['task-text']
+    });
+
+    checkbox.addEventListener('change', function () {
+        toggleStrikethrough(checkbox, span);
+    });
+
+    var editButton = createButton("Edit",
+        ['btn', 'btn-sm', 'btn-warning', 'ml-auto', 'mr-2'],
+        function () { editTask(li); }
+    );
+
+    var deleteButton = createButton("Delete",
+        ['btn', 'btn-sm', 'btn-danger'],
+        function () { deleteTask(li); }
+    );
+
+    li.appendChild(checkbox);
+    li.appendChild(span);
+    li.appendChild(editButton);
+    li.appendChild(deleteButton);
+
+    taskList.appendChild(li);
+    taskInput.value = "";
+}
+
+// Toggles strikethrough style based on checkbox state.
+function toggleStrikethrough(checkbox, taskTextElement) {
+    if (checkbox.checked) {
+        taskTextElement.classList.add('strikethrough');
+    } else {
+        taskTextElement.classList.remove('strikethrough');
+    }
+}
+
+// Edits an existing task via modal dialog.
+function editTask(taskItem) {
+    var taskText = getTaskText(taskItem);
+    var editInput = document.getElementById('editInput');
+
+    document.getElementById('editText').textContent = 'Edit task: "' + taskText + '"';
+    editInput.value = taskText;
+
+    showModal('editModal');
+
+    document.getElementById('saveButton').onclick = function () {
+        var newText = editInput.value.trim();
+        if (!validateTaskText(newText)) return;
+        taskItem.querySelector(".task-text").textContent = newText;
+        hideModal('editModal');
     };
 }
 
-// Event listener for keypress on task input (to add task on Enter key press)
-var taskInput = document.getElementById("taskInput"); // Get the task input element
-taskInput.addEventListener("keypress", function (event) { // Add keypress event listener
-    if (event.keyCode === 13) { // Check if Enter key is pressed
-        addTask(); // Call addTask function
+// Deletes a task after user confirmation.
+function deleteTask(taskItem) {
+    var taskText = getTaskText(taskItem);
+    showConfirmationModal(taskText, function () {
+        taskItem.remove();
+    });
+}
+
+// Shows a confirmation modal and executes a callback on confirm.
+function showConfirmationModal(taskText, onConfirm) {
+    document.getElementById('confirmationText').textContent =
+        'Voulez-vous supprimer la t\u00e2che "' + taskText + '" ?';
+
+    showModal('confirmationModal');
+
+    document.getElementById('confirmButton').onclick = function () {
+        onConfirm();
+        hideModal('confirmationModal');
+    };
+}
+
+// Adds task on Enter key press.
+var taskInput = document.getElementById("taskInput");
+taskInput.addEventListener("keypress", function (event) {
+    if (event.keyCode === 13) {
+        addTask();
     }
 });
