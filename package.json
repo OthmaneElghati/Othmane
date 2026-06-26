@@ -1,0 +1,14 @@
+{
+  "name": "othmane-todo",
+  "version": "1.0.0",
+  "description": "A simple To-Do List application",
+  "main": "JSToDo.js",
+  "scripts": {
+    "test": "jest --coverage",
+    "test:watch": "jest --watch"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
+  }
+}
