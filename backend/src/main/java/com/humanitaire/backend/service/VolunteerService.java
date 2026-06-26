@@ -1,6 +1,7 @@
 package com.humanitaire.backend.service;
 
 import com.humanitaire.backend.dto.VolunteerDTO;
+import com.humanitaire.backend.entity.Mission;
 import com.humanitaire.backend.entity.Volunteer;
 import com.humanitaire.backend.exception.ResourceNotFoundException;
 import com.humanitaire.backend.repository.VolunteerRepository;
@@ -10,7 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -19,83 +20,117 @@ public class VolunteerService {
 
     private final VolunteerRepository volunteerRepository;
 
-    public Page<VolunteerDTO> getAllVolunteers(Pageable pageable) {
+    public Page<VolunteerDTO> getAll(Pageable pageable) {
         return volunteerRepository.findAll(pageable).map(this::toDTO);
     }
 
-    public Page<VolunteerDTO> searchVolunteers(String query, Pageable pageable) {
-        return volunteerRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(query, query, pageable).map(this::toDTO);
+    public VolunteerDTO getById(Long id) {
+        return toDTO(findById(id));
     }
 
-    public Page<VolunteerDTO> getAvailableVolunteers(Pageable pageable) {
-        return volunteerRepository.findByAvailable(true, pageable).map(this::toDTO);
+    public Page<VolunteerDTO> search(String query, Pageable pageable) {
+        return volunteerRepository.search(query, pageable).map(this::toDTO);
     }
 
-    public VolunteerDTO getVolunteerById(Long id) {
-        Volunteer volunteer = volunteerRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Bénévole", "id", id));
-        return toDTO(volunteer);
+    public Page<VolunteerDTO> getAvailable(Pageable pageable) {
+        return volunteerRepository.findByAvailableTrue(pageable).map(this::toDTO);
+    }
+
+    public Page<VolunteerDTO> getByRegion(String region, Pageable pageable) {
+        return volunteerRepository.findByRegion(region, pageable).map(this::toDTO);
+    }
+
+    public VolunteerDTO getByUserId(Long userId) {
+        return volunteerRepository.findByUserId(userId).map(this::toDTO).orElse(null);
     }
 
     @Transactional
-    public VolunteerDTO createVolunteer(VolunteerDTO dto) {
-        Volunteer volunteer = toEntity(dto);
-        volunteer = volunteerRepository.save(volunteer);
-        return toDTO(volunteer);
+    public VolunteerDTO create(VolunteerDTO dto) {
+        return toDTO(volunteerRepository.save(toEntity(dto)));
     }
 
     @Transactional
-    public VolunteerDTO updateVolunteer(Long id, VolunteerDTO dto) {
-        Volunteer volunteer = volunteerRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Bénévole", "id", id));
-
-        volunteer.setFirstName(dto.getFirstName());
-        volunteer.setLastName(dto.getLastName());
-        volunteer.setEmail(dto.getEmail());
-        volunteer.setPhone(dto.getPhone());
-        volunteer.setAddress(dto.getAddress());
-        volunteer.setCity(dto.getCity());
-        volunteer.setRegion(dto.getRegion());
-        volunteer.setSkills(dto.getSkills());
-        volunteer.setAvailable(dto.isAvailable());
-
-        volunteer = volunteerRepository.save(volunteer);
-        return toDTO(volunteer);
+    public VolunteerDTO update(Long id, VolunteerDTO dto) {
+        Volunteer vol = findById(id);
+        vol.setFirstName(dto.getFirstName());
+        vol.setLastName(dto.getLastName());
+        vol.setEmail(dto.getEmail());
+        vol.setPhone(dto.getPhone());
+        vol.setAddress(dto.getAddress());
+        vol.setCity(dto.getCity());
+        vol.setRegion(dto.getRegion());
+        vol.setSkills(dto.getSkills());
+        vol.setAvailable(dto.isAvailable());
+        vol.setExperience(dto.getExperience());
+        return toDTO(volunteerRepository.save(vol));
     }
 
-    public void deleteVolunteer(Long id) {
-        if (!volunteerRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Bénévole", "id", id);
+    @Transactional
+    public void delete(Long id) {
+        Volunteer vol = findById(id);
+        for (Mission m : vol.getMissions()) {
+            m.getVolunteers().remove(vol);
         }
-        volunteerRepository.deleteById(id);
+        vol.getMissions().clear();
+        volunteerRepository.delete(vol);
     }
 
-    public List<VolunteerDTO> recommendVolunteers(String region, String skill) {
-        List<Volunteer> volunteers;
-        if (skill != null && !skill.isEmpty()) {
-            volunteers = volunteerRepository.findBySkillContaining(skill);
-        } else if (region != null && !region.isEmpty()) {
-            volunteers = volunteerRepository.findAvailableByRegion(region);
-        } else {
-            volunteers = volunteerRepository.findByAvailable(true, Pageable.unpaged()).getContent();
+    public List<VolunteerDTO> recommendForMission(String region, String requiredSkills) {
+        List<Volunteer> candidates = volunteerRepository.findAvailableByRegion(region);
+        if (requiredSkills != null && !requiredSkills.isEmpty()) {
+            String[] skills = requiredSkills.split(",");
+            candidates = candidates.stream()
+                    .sorted((a, b) -> {
+                        int scoreA = calculateMatchScore(a, skills, region);
+                        int scoreB = calculateMatchScore(b, skills, region);
+                        return Integer.compare(scoreB, scoreA);
+                    })
+                    .collect(Collectors.toList());
         }
-        return volunteers.stream().map(this::toDTO).collect(Collectors.toList());
+        return candidates.stream().limit(10).map(this::toDTO).toList();
     }
 
-    private VolunteerDTO toDTO(Volunteer volunteer) {
+    private int calculateMatchScore(Volunteer v, String[] requiredSkills, String region) {
+        int score = 0;
+        if (v.getSkills() != null) {
+            for (String skill : requiredSkills) {
+                if (v.getSkills().toLowerCase().contains(skill.trim().toLowerCase())) {
+                    score += 20;
+                }
+            }
+        }
+        if (v.getRegion() != null && v.getRegion().equals(region)) score += 15;
+        if (v.isAvailable()) score += 10;
+        if (v.getExperience() != null) score += Math.min(v.getExperience() * 2, 20);
+        int missionCount = v.getMissions() != null ? v.getMissions().size() : 0;
+        if (missionCount < 3) score += 10;
+        else if (missionCount < 5) score += 5;
+        return score;
+    }
+
+    private Volunteer findById(Long id) {
+        return volunteerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Bénévole non trouvé avec l'id: " + id));
+    }
+
+    private VolunteerDTO toDTO(Volunteer v) {
         return VolunteerDTO.builder()
-                .id(volunteer.getId())
-                .firstName(volunteer.getFirstName())
-                .lastName(volunteer.getLastName())
-                .email(volunteer.getEmail())
-                .phone(volunteer.getPhone())
-                .address(volunteer.getAddress())
-                .city(volunteer.getCity())
-                .region(volunteer.getRegion())
-                .skills(volunteer.getSkills())
-                .available(volunteer.isAvailable())
-                .avatar(volunteer.getAvatar())
-                .missionCount(volunteer.getMissions() != null ? volunteer.getMissions().size() : 0)
+                .id(v.getId())
+                .firstName(v.getFirstName())
+                .lastName(v.getLastName())
+                .email(v.getEmail())
+                .phone(v.getPhone())
+                .address(v.getAddress())
+                .city(v.getCity())
+                .region(v.getRegion())
+                .skills(v.getSkills())
+                .available(v.isAvailable())
+                .avatar(v.getAvatar())
+                .experience(v.getExperience())
+                .userId(v.getUser() != null ? v.getUser().getId() : null)
+                .missionCount(v.getMissions() != null ? v.getMissions().size() : 0)
+                .createdAt(v.getCreatedAt())
+                .updatedAt(v.getUpdatedAt())
                 .build();
     }
 
@@ -110,6 +145,7 @@ public class VolunteerService {
                 .region(dto.getRegion())
                 .skills(dto.getSkills())
                 .available(dto.isAvailable())
+                .experience(dto.getExperience())
                 .build();
     }
 }

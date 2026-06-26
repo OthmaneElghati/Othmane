@@ -5,6 +5,7 @@ frontend/dist/
 
 # Backend build
 backend/target/
+backend/data/
 
 # IDE
 .idea/

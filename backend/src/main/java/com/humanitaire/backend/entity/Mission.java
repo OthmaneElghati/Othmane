@@ -39,7 +39,12 @@ public class Mission {
     private String region;
     private String image;
 
+    private Integer numberOfBeneficiaries;
     private Integer priorityScore;
+
+    @ManyToOne
+    @JoinColumn(name = "manager_id")
+    private User manager;
 
     @ManyToMany
     @JoinTable(name = "mission_volunteers",

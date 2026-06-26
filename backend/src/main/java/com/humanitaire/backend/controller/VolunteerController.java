@@ -2,9 +2,11 @@ package com.humanitaire.backend.controller;
 
 import com.humanitaire.backend.dto.VolunteerDTO;
 import com.humanitaire.backend.service.VolunteerService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,55 +21,52 @@ public class VolunteerController {
     private final VolunteerService volunteerService;
 
     @GetMapping
-    public ResponseEntity<Page<VolunteerDTO>> getAllVolunteers(
+    public ResponseEntity<Page<VolunteerDTO>> getAll(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String direction) {
-        Sort sort = direction.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
-        return ResponseEntity.ok(volunteerService.getAllVolunteers(PageRequest.of(page, size, sort)));
-    }
-
-    @GetMapping("/search")
-    public ResponseEntity<Page<VolunteerDTO>> searchVolunteers(
-            @RequestParam String q,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(volunteerService.searchVolunteers(q, PageRequest.of(page, size)));
-    }
-
-    @GetMapping("/available")
-    public ResponseEntity<Page<VolunteerDTO>> getAvailableVolunteers(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(volunteerService.getAvailableVolunteers(PageRequest.of(page, size)));
-    }
-
-    @GetMapping("/recommend")
-    public ResponseEntity<List<VolunteerDTO>> recommendVolunteers(
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @RequestParam(required = false) String search,
             @RequestParam(required = false) String region,
-            @RequestParam(required = false) String skill) {
-        return ResponseEntity.ok(volunteerService.recommendVolunteers(region, skill));
+            @RequestParam(required = false) Boolean available) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDir.equals("asc") ? Sort.Direction.ASC : Sort.Direction.DESC, sortBy));
+        if (search != null && !search.isEmpty()) return ResponseEntity.ok(volunteerService.search(search, pageable));
+        if (region != null && !region.isEmpty()) return ResponseEntity.ok(volunteerService.getByRegion(region, pageable));
+        if (available != null && available) return ResponseEntity.ok(volunteerService.getAvailable(pageable));
+        return ResponseEntity.ok(volunteerService.getAll(pageable));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<VolunteerDTO> getVolunteerById(@PathVariable Long id) {
-        return ResponseEntity.ok(volunteerService.getVolunteerById(id));
+    public ResponseEntity<VolunteerDTO> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(volunteerService.getById(id));
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<VolunteerDTO> getByUserId(@PathVariable Long userId) {
+        VolunteerDTO dto = volunteerService.getByUserId(userId);
+        return dto != null ? ResponseEntity.ok(dto) : ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/recommend")
+    public ResponseEntity<List<VolunteerDTO>> recommend(
+            @RequestParam String region,
+            @RequestParam(required = false) String skills) {
+        return ResponseEntity.ok(volunteerService.recommendForMission(region, skills));
     }
 
     @PostMapping
-    public ResponseEntity<VolunteerDTO> createVolunteer(@RequestBody VolunteerDTO dto) {
-        return ResponseEntity.ok(volunteerService.createVolunteer(dto));
+    public ResponseEntity<VolunteerDTO> create(@Valid @RequestBody VolunteerDTO dto) {
+        return ResponseEntity.ok(volunteerService.create(dto));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<VolunteerDTO> updateVolunteer(@PathVariable Long id, @RequestBody VolunteerDTO dto) {
-        return ResponseEntity.ok(volunteerService.updateVolunteer(id, dto));
+    public ResponseEntity<VolunteerDTO> update(@PathVariable Long id, @Valid @RequestBody VolunteerDTO dto) {
+        return ResponseEntity.ok(volunteerService.update(id, dto));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteVolunteer(@PathVariable Long id) {
-        volunteerService.deleteVolunteer(id);
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        volunteerService.delete(id);
         return ResponseEntity.noContent().build();
     }
 }

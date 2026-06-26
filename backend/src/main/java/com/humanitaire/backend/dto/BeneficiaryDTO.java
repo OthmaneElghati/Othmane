@@ -1,6 +1,7 @@
 package com.humanitaire.backend.dto;
 
 import lombok.*;
+import java.time.LocalDateTime;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class BeneficiaryDTO {
@@ -15,4 +16,6 @@ public class BeneficiaryDTO {
     private String needs;
     private Long missionId;
     private String missionTitle;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

@@ -12,8 +12,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -22,90 +23,85 @@ public class MissionService {
     private final MissionRepository missionRepository;
     private final VolunteerRepository volunteerRepository;
 
-    public Page<MissionDTO> getAllMissions(Pageable pageable) {
+    public Page<MissionDTO> getAll(Pageable pageable) {
         return missionRepository.findAll(pageable).map(this::toDTO);
     }
 
-    public Page<MissionDTO> searchMissions(String query, Pageable pageable) {
-        return missionRepository.findByTitleContainingIgnoreCase(query, pageable).map(this::toDTO);
+    public MissionDTO getById(Long id) {
+        return toDTO(findById(id));
     }
 
-    public Page<MissionDTO> getMissionsByStatus(String status, Pageable pageable) {
-        Mission.MissionStatus missionStatus = Mission.MissionStatus.valueOf(status.toUpperCase());
-        return missionRepository.findByStatus(missionStatus, pageable).map(this::toDTO);
+    public Page<MissionDTO> search(String query, Pageable pageable) {
+        return missionRepository.search(query, pageable).map(this::toDTO);
     }
 
-    public Page<MissionDTO> getMissionsByRegion(String region, Pageable pageable) {
+    public Page<MissionDTO> getByStatus(String status, Pageable pageable) {
+        return missionRepository.findByStatus(Mission.MissionStatus.valueOf(status), pageable).map(this::toDTO);
+    }
+
+    public Page<MissionDTO> getByRegion(String region, Pageable pageable) {
         return missionRepository.findByRegion(region, pageable).map(this::toDTO);
     }
 
-    public MissionDTO getMissionById(Long id) {
-        Mission mission = missionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Mission", "id", id));
-        return toDTO(mission);
+    public Page<MissionDTO> getByPriority(String priority, Pageable pageable) {
+        return missionRepository.findByPriority(Mission.MissionPriority.valueOf(priority), pageable).map(this::toDTO);
+    }
+
+    public Page<MissionDTO> getByManager(Long managerId, Pageable pageable) {
+        return missionRepository.findByManagerId(managerId, pageable).map(this::toDTO);
     }
 
     @Transactional
-    public MissionDTO createMission(MissionDTO dto) {
+    public MissionDTO create(MissionDTO dto) {
         Mission mission = toEntity(dto);
         mission.setPriorityScore(calculatePriorityScore(mission));
-        mission = missionRepository.save(mission);
-        return toDTO(mission);
+        return toDTO(missionRepository.save(mission));
     }
 
     @Transactional
-    public MissionDTO updateMission(Long id, MissionDTO dto) {
-        Mission mission = missionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Mission", "id", id));
-
+    public MissionDTO update(Long id, MissionDTO dto) {
+        Mission mission = findById(id);
         mission.setTitle(dto.getTitle());
         mission.setDescription(dto.getDescription());
         mission.setStartDate(dto.getStartDate());
         mission.setEndDate(dto.getEndDate());
         mission.setBudget(dto.getBudget());
-        mission.setStatus(Mission.MissionStatus.valueOf(dto.getStatus()));
-        mission.setPriority(Mission.MissionPriority.valueOf(dto.getPriority()));
+        if (dto.getStatus() != null) mission.setStatus(Mission.MissionStatus.valueOf(dto.getStatus()));
+        if (dto.getPriority() != null) mission.setPriority(Mission.MissionPriority.valueOf(dto.getPriority()));
         mission.setLatitude(dto.getLatitude());
         mission.setLongitude(dto.getLongitude());
         mission.setCity(dto.getCity());
         mission.setRegion(dto.getRegion());
-        mission.setImage(dto.getImage());
+        mission.setNumberOfBeneficiaries(dto.getNumberOfBeneficiaries());
         mission.setPriorityScore(calculatePriorityScore(mission));
-
-        mission = missionRepository.save(mission);
-        return toDTO(mission);
+        return toDTO(missionRepository.save(mission));
     }
 
-    public void deleteMission(Long id) {
-        if (!missionRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Mission", "id", id);
-        }
+    @Transactional
+    public void delete(Long id) {
+        Mission mission = findById(id);
+        mission.getVolunteers().clear();
+        missionRepository.save(mission);
         missionRepository.deleteById(id);
     }
 
     @Transactional
     public MissionDTO assignVolunteer(Long missionId, Long volunteerId) {
-        Mission mission = missionRepository.findById(missionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Mission", "id", missionId));
+        Mission mission = findById(missionId);
         Volunteer volunteer = volunteerRepository.findById(volunteerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Bénévole", "id", volunteerId));
-
+                .orElseThrow(() -> new ResourceNotFoundException("Bénévole non trouvé"));
         mission.getVolunteers().add(volunteer);
-        mission = missionRepository.save(mission);
-        return toDTO(mission);
+        return toDTO(missionRepository.save(mission));
     }
 
     @Transactional
     public MissionDTO removeVolunteer(Long missionId, Long volunteerId) {
-        Mission mission = missionRepository.findById(missionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Mission", "id", missionId));
-
+        Mission mission = findById(missionId);
         mission.getVolunteers().removeIf(v -> v.getId().equals(volunteerId));
-        mission = missionRepository.save(mission);
-        return toDTO(mission);
+        return toDTO(missionRepository.save(mission));
     }
 
-    private int calculatePriorityScore(Mission mission) {
+    public int calculatePriorityScore(Mission mission) {
         int score = 0;
         if (mission.getPriority() != null) {
             switch (mission.getPriority()) {
@@ -115,37 +111,63 @@ public class MissionService {
                 case LOW -> score += 10;
             }
         }
-        if (mission.getBeneficiaries() != null) {
-            score += Math.min(mission.getBeneficiaries().size() * 2, 30);
+        if (mission.getNumberOfBeneficiaries() != null) {
+            if (mission.getNumberOfBeneficiaries() > 500) score += 20;
+            else if (mission.getNumberOfBeneficiaries() > 200) score += 15;
+            else if (mission.getNumberOfBeneficiaries() > 50) score += 10;
+            else score += 5;
         }
         if (mission.getBudget() != null && mission.getBudget() > 0) {
-            score += 10;
+            if (mission.getBudget() < 50000) score += 10;
+            else if (mission.getBudget() < 100000) score += 5;
         }
-        if (mission.getVolunteers() != null && mission.getVolunteers().size() < 3) {
-            score += 20;
+        if (mission.getEndDate() != null) {
+            long daysUntilEnd = ChronoUnit.DAYS.between(LocalDate.now(), mission.getEndDate());
+            if (daysUntilEnd < 7) score += 15;
+            else if (daysUntilEnd < 30) score += 10;
+            else if (daysUntilEnd < 90) score += 5;
         }
+        int volunteerCount = mission.getVolunteers() != null ? mission.getVolunteers().size() : 0;
+        if (volunteerCount == 0) score += 10;
+        else if (volunteerCount < 3) score += 5;
         return Math.min(score, 100);
     }
 
-    private MissionDTO toDTO(Mission mission) {
+    public List<MissionDTO> getRecommendedMissions() {
+        return missionRepository.findActiveMissionsSorted().stream()
+                .limit(5)
+                .map(this::toDTO)
+                .toList();
+    }
+
+    private Mission findById(Long id) {
+        return missionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Mission non trouvée avec l'id: " + id));
+    }
+
+    private MissionDTO toDTO(Mission m) {
         return MissionDTO.builder()
-                .id(mission.getId())
-                .title(mission.getTitle())
-                .description(mission.getDescription())
-                .startDate(mission.getStartDate())
-                .endDate(mission.getEndDate())
-                .budget(mission.getBudget())
-                .status(mission.getStatus() != null ? mission.getStatus().name() : null)
-                .priority(mission.getPriority() != null ? mission.getPriority().name() : null)
-                .latitude(mission.getLatitude())
-                .longitude(mission.getLongitude())
-                .city(mission.getCity())
-                .region(mission.getRegion())
-                .image(mission.getImage())
-                .priorityScore(mission.getPriorityScore())
-                .volunteerCount(mission.getVolunteers() != null ? mission.getVolunteers().size() : 0)
-                .beneficiaryCount(mission.getBeneficiaries() != null ? mission.getBeneficiaries().size() : 0)
-                .volunteerIds(mission.getVolunteers() != null ? mission.getVolunteers().stream().map(Volunteer::getId).collect(Collectors.toSet()) : Set.of())
+                .id(m.getId())
+                .title(m.getTitle())
+                .description(m.getDescription())
+                .startDate(m.getStartDate())
+                .endDate(m.getEndDate())
+                .budget(m.getBudget())
+                .status(m.getStatus() != null ? m.getStatus().name() : null)
+                .priority(m.getPriority() != null ? m.getPriority().name() : null)
+                .latitude(m.getLatitude())
+                .longitude(m.getLongitude())
+                .city(m.getCity())
+                .region(m.getRegion())
+                .image(m.getImage())
+                .numberOfBeneficiaries(m.getNumberOfBeneficiaries())
+                .priorityScore(m.getPriorityScore())
+                .managerId(m.getManager() != null ? m.getManager().getId() : null)
+                .managerName(m.getManager() != null ? m.getManager().getFullName() : null)
+                .volunteerCount(m.getVolunteers() != null ? m.getVolunteers().size() : 0)
+                .beneficiaryCount(m.getBeneficiaries() != null ? m.getBeneficiaries().size() : 0)
+                .createdAt(m.getCreatedAt())
+                .updatedAt(m.getUpdatedAt())
                 .build();
     }
 
@@ -162,7 +184,7 @@ public class MissionService {
                 .longitude(dto.getLongitude())
                 .city(dto.getCity())
                 .region(dto.getRegion())
-                .image(dto.getImage())
+                .numberOfBeneficiaries(dto.getNumberOfBeneficiaries())
                 .build();
     }
 }
