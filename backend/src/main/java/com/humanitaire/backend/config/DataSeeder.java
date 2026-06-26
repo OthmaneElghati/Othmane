@@ -276,10 +276,10 @@ public class DataSeeder implements CommandLineRunner {
         List<Mission> missions = missionRepository.findAll();
 
         for (String[] c : convoys) {
-            double depLat = Double.parseDouble(c[4]);
-            double depLng = Double.parseDouble(c[5]);
-            double destLat = Double.parseDouble(c[6]);
-            double destLng = Double.parseDouble(c[7]);
+            double depLat = Double.parseDouble(c[3]);
+            double depLng = Double.parseDouble(c[4]);
+            double destLat = Double.parseDouble(c[5]);
+            double destLng = Double.parseDouble(c[6]);
             double currentLat = depLat + (destLat - depLat) * random.nextDouble();
             double currentLng = depLng + (destLng - depLng) * random.nextDouble();
 
@@ -293,7 +293,7 @@ public class DataSeeder implements CommandLineRunner {
                 .destinationLongitude(destLng)
                 .currentLatitude(currentLat)
                 .currentLongitude(currentLng)
-                .status(Convoy.ConvoyStatus.valueOf(c[3]))
+                .status(Convoy.ConvoyStatus.valueOf(c[7]))
                 .cargo(c[8])
                 .departureTime(LocalDateTime.now().minusDays(random.nextInt(10)))
                 .estimatedArrival(LocalDateTime.now().plusDays(random.nextInt(5)))
