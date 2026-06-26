@@ -24,6 +24,7 @@ public class DonationController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String direction) {
+        size = Math.min(size, 100);
         Sort sort = direction.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         return ResponseEntity.ok(donationService.getAllDonations(PageRequest.of(page, size, sort)));
     }
@@ -33,6 +34,7 @@ public class DonationController {
             @PathVariable Long donorId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+        size = Math.min(size, 100);
         return ResponseEntity.ok(donationService.getDonationsByDonor(donorId, PageRequest.of(page, size)));
     }
 
@@ -41,6 +43,7 @@ public class DonationController {
             @PathVariable Long missionId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+        size = Math.min(size, 100);
         return ResponseEntity.ok(donationService.getDonationsByMission(missionId, PageRequest.of(page, size)));
     }
 
