@@ -25,6 +25,7 @@ function Missions() {
       const res = await missionService.getAll()
       setMissions(Array.isArray(res.data) ? res.data : res.data.content || [])
     } catch (err) {
+      console.error('Failed to load missions:', err)
       setMissions([])
     } finally {
       setLoading(false)

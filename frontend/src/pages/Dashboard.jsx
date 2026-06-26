@@ -22,11 +22,12 @@ function Dashboard() {
       const res = await dashboardService.getStats()
       setStats(res.data)
     } catch (err) {
+      console.error('Failed to load dashboard stats:', err)
       setStats({
-        totalMissions: 30, activeMissions: 12, completedMissions: 6, totalVolunteers: 50,
-        totalBeneficiaries: 100, totalDonations: 100, totalDonationAmount: 524000,
-        totalEvents: 15, totalConvoys: 20, monthlyDonations: [45000, 52000, 38000, 61000, 55000, 72000, 48000, 63000, 57000, 68000, 74000, 82000],
-        missionsByRegion: { 'Marrakech-Safi': 6, 'Fès-Meknès': 5, 'Rabat-Salé-Kénitra': 5, 'Drâa-Tafilalet': 4, 'Souss-Massa': 3, 'Oriental': 3, 'Casablanca-Settat': 2, 'Tanger-Tétouan-Al Hoceïma': 2 }
+        totalMissions: 0, activeMissions: 0, completedMissions: 0, totalVolunteers: 0,
+        totalBeneficiaries: 0, totalDonations: 0, totalDonationAmount: 0,
+        totalEvents: 0, totalConvoys: 0, monthlyDonations: [],
+        missionsByRegion: {}
       })
     } finally {
       setLoading(false)

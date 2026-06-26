@@ -37,6 +37,7 @@ function MapPage() {
       setMissions(Array.isArray(mRes.data) ? mRes.data : mRes.data.content || [])
       setConvoys(Array.isArray(cRes.data) ? cRes.data : cRes.data.content || [])
     } catch (err) {
+      console.error('Failed to load map data:', err)
       setMissions([])
       setConvoys([])
     }

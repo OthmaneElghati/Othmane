@@ -21,6 +21,7 @@ function Volunteers() {
       const res = await volunteerService.getAll()
       setVolunteers(Array.isArray(res.data) ? res.data : res.data.content || [])
     } catch (err) {
+      console.error('Failed to load volunteers:', err)
       setVolunteers([])
     } finally {
       setLoading(false)

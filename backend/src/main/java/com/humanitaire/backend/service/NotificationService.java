@@ -5,6 +5,8 @@ import com.humanitaire.backend.entity.User;
 import com.humanitaire.backend.repository.NotificationRepository;
 import com.humanitaire.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -15,6 +17,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
+
+    private static final Logger logger = LoggerFactory.getLogger(NotificationService.class);
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
@@ -58,6 +62,8 @@ public class NotificationService {
                     .read(false)
                     .build();
             notificationRepository.save(notification);
+        } else {
+            logger.warn("Cannot create notification: user with id {} not found", userId);
         }
     }
 }

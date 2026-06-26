@@ -19,6 +19,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Set;
@@ -28,6 +31,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
 
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
@@ -45,7 +50,8 @@ public class AuthService {
         String token = tokenProvider.generateToken(authentication);
         String refreshToken = tokenProvider.generateRefreshToken(userPrincipal.getId());
 
-        User user = userRepository.findById(userPrincipal.getId()).orElseThrow();
+        User user = userRepository.findById(userPrincipal.getId())
+                .orElseThrow(() -> new BadRequestException("Utilisateur non trouvé"));
         Set<String> roles = user.getRoles().stream()
                 .map(role -> role.getName().name())
                 .collect(Collectors.toSet());
@@ -72,7 +78,8 @@ public class AuthService {
         if (request.getRole() != null) {
             try {
                 roleName = Role.RoleName.valueOf(request.getRole());
-            } catch (IllegalArgumentException ignored) {
+            } catch (IllegalArgumentException e) {
+                logger.warn("Invalid role '{}' provided during registration, defaulting to ROLE_VOLUNTEER", request.getRole());
             }
         }
 

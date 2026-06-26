@@ -22,6 +22,7 @@ function Beneficiaries() {
       const res = await beneficiaryService.getAll()
       setItems(Array.isArray(res.data) ? res.data : res.data.content || [])
     } catch (err) {
+      console.error('Failed to load beneficiaries:', err)
       setItems([])
     } finally {
       setLoading(false)

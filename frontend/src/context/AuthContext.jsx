@@ -10,7 +10,13 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
     if (storedUser && token) {
-      setUser(JSON.parse(storedUser))
+      try {
+        setUser(JSON.parse(storedUser))
+      } catch (err) {
+        console.error('Failed to parse stored user data, clearing auth state:', err)
+        localStorage.removeItem('user')
+        localStorage.removeItem('token')
+      }
     }
     setLoading(false)
   }, [token])
